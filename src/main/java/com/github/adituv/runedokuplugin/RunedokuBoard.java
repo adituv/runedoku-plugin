@@ -46,7 +46,7 @@ public class RunedokuBoard {
     }
 
     public RunedokuCell getCell(int index) {
-        if(index > 0 && index < cells.length) {
+        if(index >= 0 && index < cells.length) {
             return cells[index];
         } else {
             return null;
