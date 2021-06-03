@@ -24,4 +24,18 @@ public interface RunedokuConfig extends Config
 		description = "The default foreground color for the overlay"
 	)
 	default Color foregroundColor() { return Color.YELLOW; }
+
+	@ConfigItem(
+		keyName = "errorColor",
+		name = "Error color",
+		description = "The color used to highlight errors in the overlay"
+	)
+	default Color errorColor() { return Color.RED; }
+
+	@ConfigItem(
+		keyName = "outlineColor",
+		name = "Outline color",
+		description = "The outline color for text in the overlay"
+	)
+	default Color outlineColor() { return Color.BLACK; }
 }
