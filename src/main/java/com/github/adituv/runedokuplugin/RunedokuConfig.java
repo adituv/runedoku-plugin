@@ -19,6 +19,13 @@ public interface RunedokuConfig extends Config
 	default boolean useNumbers() { return false; }
 
 	@ConfigItem(
+		keyName = "markOnShift",
+		name = "Shift-Mark",
+		description = "Hold shift to make mark the left click menu option"
+	)
+	default boolean markOnShift() { return true;}
+
+	@ConfigItem(
 		keyName = "foregroundColor",
 		name = "Foreground color",
 		description = "The default foreground color for the overlay"

@@ -1,6 +1,8 @@
 package com.github.adituv.runedokuplugin;
 
 import com.google.inject.Inject;
+import com.jogamp.graph.geom.Outline;
+import lombok.AccessLevel;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
@@ -19,14 +21,24 @@ import static com.github.adituv.runedokuplugin.RunedokuConstants.*;
 public class RunedokuOverlay extends Overlay {
     private final Client client;
 
-    // 4 or 9
-    private int boardSize;
-
+    @Setter(AccessLevel.NONE)
     private boolean isActive;
+
+    @Setter(AccessLevel.NONE)
+    private RunedokuBoard board;
+
     private boolean shouldDrawNumbers;
     private Color foregroundColor;
     private Color outlineColor;
     private Color errorColor;
+
+    private final Font bigFont;
+    private final Font markFont;
+
+    private final int BOX_X_OFFSET = -2;
+    private final int BOX_Y_OFFSET = 0;
+    private final int BOX_WIDTH_OFFSET = -1;
+    private final int BOX_HEIGHT_OFFSET = -1;
 
     private final float BIG_FONT_SIZE = 24.0f;
     private final float BIG_FONT_X_OFFSET = -2.5f;
@@ -34,17 +46,22 @@ public class RunedokuOverlay extends Overlay {
     @Override
     public Dimension render(Graphics2D graphics) {
         if(this.isActive) {
-            Widget containerWidget = client.getWidget(RUNEDOKU_CONTAINER_WIDGET_ID);
+            final Widget containerWidget = client.getWidget(RUNEDOKU_CONTAINER_WIDGET_ID);
             if(containerWidget == null || containerWidget.isHidden()) {
                 return null;
             }
 
-            if(!(this.boardSize == 4 || this.boardSize == 9)) {
-                log.error(String.format("render: Invalid board size %d", this.boardSize));
+            final int boardWidth = this.board.getWidth();
+
+            if(!(boardWidth == 4 || boardWidth == 9)) {
+                log.error(String.format("render: Invalid board width %d", boardWidth));
             }
 
-            Widget boardWidget = client.getWidget(RUNEDOKU_BOARD_WIDGET_ID);
-            Widget runeWidget = client.getWidget(RUNEDOKU_RUNE_WIDGET_ID);
+            final Widget boardWidget = client.getWidget(RUNEDOKU_BOARD_WIDGET_ID);
+            final Widget runeWidget = client.getWidget(RUNEDOKU_RUNE_WIDGET_ID);
+
+            final FontMetrics bigFontMetrics = graphics.getFontMetrics(bigFont);
+            final FontMetrics markFontMetrics = graphics.getFontMetrics(markFont);
 
             if(boardWidget == null) {
                 log.error("render: boardWidget is null");
@@ -55,70 +72,86 @@ public class RunedokuOverlay extends Overlay {
                 return null;
             }
 
-            Font bigFont = FontManager.getDefaultBoldFont().deriveFont(BIG_FONT_SIZE);
-            final FontMetrics fontMetrics = graphics.getFontMetrics(bigFont);
-
-            OutlineTextComponent bigNumberText = new OutlineTextComponent();
+            final OutlineTextComponent bigNumberText = new OutlineTextComponent();
             bigNumberText.setOutline(2,outlineColor);
             bigNumberText.setColor(foregroundColor);
             bigNumberText.setFont(bigFont);
 
-            int[][] rowNumbers = new int[boardSize][boardSize];
-            int[][] colNumbers = new int[boardSize][boardSize];
-            int[][] boxNumbers = new int[boardSize][boardSize];
+            final OutlineTextComponent markNumberText = new OutlineTextComponent();
+            markNumberText.setOutline(1,outlineColor);
+            markNumberText.setColor(foregroundColor);
+            markNumberText.setFont(markFont);
 
-            Widget[] boardChildren = boardWidget.getChildren();
-
-            // First pass: look for numbers that directly clash
-            for(int i = 0; i < boardChildren.length; i++) {
-                Widget w = boardChildren[i];
-                int rowNum = i / boardSize;
-                int colNum = i % boardSize;
-                int boxNum = getBoxNum(rowNum,colNum);
-
-                RunedokuRune rune = RunedokuRune.getByItemId(w.getItemId());
-
-                int sudokuNum = 0;
-                if(rune != null) {
-                    sudokuNum = rune.getSudokuNumber();
-                }
-
-                if(sudokuNum > 0) {
-                    rowNumbers[rowNum][sudokuNum - 1]++;
-                    colNumbers[colNum][sudokuNum - 1]++;
-                    boxNumbers[boxNum][sudokuNum - 1]++;
-                }
-            }
-
-            // Second pass: draw overlays
-            for(int i = 0; i < boardChildren.length; i++) {
-                Widget w = boardChildren[i];
-                int rowNum = i / boardSize;
-                int colNum = i % boardSize;
-                int boxNum = getBoxNum(rowNum,colNum);
-                RunedokuRune rune = RunedokuRune.getByItemId(w.getItemId());
-
-                int sudokuNum = 0;
-                if(rune != null) {
-                    sudokuNum = rune.getSudokuNumber();
-                }
-
-
-                if(sudokuNum > 0) {
-                    if(rowNumbers[rowNum][sudokuNum-1] > 1 || colNumbers[colNum][sudokuNum-1] > 1 || boxNumbers[boxNum][sudokuNum-1] > 1) {
+            for(RunedokuCell c : board.getCells()) {
+                if(c.getSudokuNumber() > 0) {
+                    if(board.cellHasClash(c)) {
                         // This rune clashes with another rune.  Highlight it with an error box
-                        drawErrorBox(graphics, w);
+                        drawErrorBox(graphics, c.getWidget());
                     }
-                }
 
-                if(shouldDrawNumbers) {
-                    drawRuneText(graphics, fontMetrics, bigNumberText, w);
+                    if(shouldDrawNumbers) {
+                        final Widget w = c.getWidget();
+                        final String numberAsText = String.format("%d", c.getSudokuNumber());
+
+                        Rectangle2D stringBounds = bigFontMetrics.getStringBounds(numberAsText,graphics);
+                        double x = w.getBounds().getCenterX() - stringBounds.getCenterX() + BIG_FONT_X_OFFSET;
+                        double y = w.getBounds().getCenterY() - stringBounds.getCenterY();
+                        Point location = new Point((int)x,(int)y);
+
+                        bigNumberText.setText(numberAsText);
+                        bigNumberText.setPosition(location);
+                        bigNumberText.render(graphics);
+                    }
+                } else {
+                    // If there isn't a number in the cell, draw pencil marks
+                    Rectangle cellBounds = c.getWidget().getBounds();
+                    int xPos = cellBounds.x + BOX_X_OFFSET;
+                    int yPos = cellBounds.y + BOX_Y_OFFSET + markFontMetrics.getHeight();
+                    cellBounds.x += BOX_X_OFFSET + 1;
+                    cellBounds.y += BOX_Y_OFFSET + 1;
+                    cellBounds.width += BOX_WIDTH_OFFSET - 1;
+                    cellBounds.height += BOX_HEIGHT_OFFSET - 1;
+
+                    StringBuffer marks = new StringBuffer("");
+
+                    for(int i = 0; i < 9; i++) {
+                        if(c.getMarks()[i]) {
+                            marks.append(i+1);
+                            if(marks.length() == 5) {
+                                // Render first line and start again
+                                markNumberText.setText(marks.toString());
+                                markNumberText.setPosition(new Point(xPos, yPos));
+                                Dimension textBounds = markNumberText.render(graphics);
+
+                                yPos += textBounds.height;
+
+                                marks = new StringBuffer("");
+                            }
+                        }
+                    }
+
+                    markNumberText.setText(marks.toString());
+                    markNumberText.setPosition(new Point(xPos, yPos));
+                    markNumberText.render(graphics);
                 }
             }
 
             for (Widget w : runeWidget.getChildren()) {
                 if(shouldDrawNumbers) {
-                    drawRuneText(graphics, fontMetrics, bigNumberText, w);
+                    RunedokuRune rune = RunedokuRune.getByItemId(w.getItemId());
+
+                    if(rune != null) {
+                        String numberAsText = String.format("%d",rune.getSudokuNumber());
+
+                        Rectangle2D stringBounds = bigFontMetrics.getStringBounds(numberAsText,graphics);
+                        double x = w.getBounds().getCenterX() - stringBounds.getCenterX() + BIG_FONT_X_OFFSET;
+                        double y = w.getBounds().getCenterY() - stringBounds.getCenterY();
+                        Point location = new Point((int)x,(int)y);
+
+                        bigNumberText.setText(numberAsText);
+                        bigNumberText.setPosition(location);
+                        bigNumberText.render(graphics);
+                    }
                 }
             }
         }
@@ -126,22 +159,57 @@ public class RunedokuOverlay extends Overlay {
         return null;
     }
 
-    private int getBoxNum(int rowNum, int colNum) {
-        if(boardSize == 4) {
-            return 2*(rowNum/2) + (colNum/2);
-        } else if(boardSize == 9) {
-            return 3*(rowNum/3) + (colNum/3);
-        } else {
-            log.error(String.format("getBoxNum: Invalid boardSize %d", boardSize));
-            return -1;
+    private Point getMarkLocation(int i, Graphics2D graphics, Rectangle cellBounds) {
+        final FontMetrics fontMetrics = graphics.getFontMetrics(markFont);
+        double x = -1.0;
+        double y = -1.0;
+        int boardWidth = board.getWidth();
+        Rectangle2D stringBounds = fontMetrics.getStringBounds(String.format("%d", i+1), graphics);
+
+        if(boardWidth == 4) {
+            if(i % 2 == 0) {
+                x = cellBounds.x;
+            } else {
+                x = cellBounds.getMaxX() - stringBounds.getMaxX();
+            }
+
+            if(i / 2 == 0) {
+                y = cellBounds.y + stringBounds.getHeight();
+            } else {
+                y = cellBounds.getMaxY() + fontMetrics.getDescent();
+            }
+        } else if(boardWidth == 9) {
+            if(i % 3 == 0) {
+                x = cellBounds.x;
+            } else if(i % 3 == 1) {
+                x = cellBounds.getCenterX() - stringBounds.getCenterX();
+            } else {
+                x = cellBounds.getMaxX() - stringBounds.getMaxX();
+            }
+
+            if(i / 3 == 0) {
+                y = cellBounds.y + stringBounds.getHeight();
+            } else if(i / 3 == 1) {
+                y = cellBounds.getCenterY() - stringBounds.getCenterY() + fontMetrics.getDescent()/2.0;
+            } else {
+                y = cellBounds.getMaxY() + fontMetrics.getDescent();
+            }
         }
+
+        return new Point((int)x,(int)y);
+    }
+
+    public void activate(RunedokuBoard board) {
+        this.board = board;
+        this.isActive = true;
+    }
+
+    public void deactivate() {
+        this.board = null;
+        this.isActive = false;
     }
 
     private void drawErrorBox(Graphics2D graphics, Widget w) {
-        final int BOX_X_OFFSET = -2;
-        final int BOX_Y_OFFSET = 0;
-        final int BOX_WIDTH_OFFSET = -1;
-        final int BOX_HEIGHT_OFFSET = -1;
 
         graphics.setColor(ColorUtil.colorWithAlpha(errorColor, 0xFF));
         graphics.setStroke(new BasicStroke(2.0f));
@@ -154,27 +222,12 @@ public class RunedokuOverlay extends Overlay {
         );
     }
 
-    private void drawRuneText(Graphics2D graphics, FontMetrics fontMetrics, OutlineTextComponent text, Widget w) {
-        RunedokuRune rune = RunedokuRune.getByItemId(w.getItemId());
-
-        if(rune != null) {
-            String numberAsText = String.format("%d",rune.getSudokuNumber());
-
-            Rectangle2D stringBounds = fontMetrics.getStringBounds(numberAsText,graphics);
-            double x = w.getBounds().getCenterX() - stringBounds.getCenterX() + BIG_FONT_X_OFFSET;
-            double y = w.getBounds().getCenterY() - stringBounds.getCenterY();
-            Point location = new Point((int)x,(int)y);
-
-            text.setText(numberAsText);
-            text.setPosition(location);
-            text.render(graphics);
-        }
-    }
-
     @Inject
     public RunedokuOverlay(final RunedokuPlugin plugin, Client client) {
         super(plugin);
         this.client = client;
+        this.bigFont = FontManager.getDefaultBoldFont().deriveFont(BIG_FONT_SIZE);
+        this.markFont = FontManager.getRunescapeSmallFont();
 
         setPosition(OverlayPosition.DETACHED);
         setLayer(OverlayLayer.ABOVE_WIDGETS);

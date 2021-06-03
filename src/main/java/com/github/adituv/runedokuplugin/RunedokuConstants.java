@@ -10,4 +10,6 @@ public final class RunedokuConstants {
     public static final int RUNEDOKU_BOARD_WIDGET_ID = WidgetInfo.PACK(RUNEDOKU_WIDGET_GROUP_ID,13);
     public static final int RUNEDOKU_RUNE_WIDGET_ID = WidgetInfo.PACK(RUNEDOKU_WIDGET_GROUP_ID,9);
     public static final int RUNEDOKU_BUTTON_WIDGET_ID = WidgetInfo.PACK(RUNEDOKU_WIDGET_GROUP_ID,10);
+    public static final int RUNEDOKU_EXIT_WIDGET_ID = WidgetInfo.PACK(RUNEDOKU_WIDGET_GROUP_ID, 15);
+    public static final int RUNEDOKU_BOARD_CLICK_WIDGET_ID = WidgetInfo.PACK(RUNEDOKU_WIDGET_GROUP_ID, 14);
 }
