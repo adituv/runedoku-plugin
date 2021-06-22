@@ -326,6 +326,7 @@ public class RunedokuOverlay extends Overlay {
         setLayer(OverlayLayer.ABOVE_WIDGETS);
         setPriority(OverlayPriority.MED);
 
+        // Preload images for runes
         this.runeImages = new AsyncBufferedImage[10];
         for(int i = 1; i < 10; i++) {
             this.runeImages[i] = itemManager.getImage(RunedokuRune.getBySudokuNumber(i).getItemId());
