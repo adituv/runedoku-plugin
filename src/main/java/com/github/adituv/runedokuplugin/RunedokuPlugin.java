@@ -37,7 +37,7 @@ public class RunedokuPlugin extends Plugin
 	@Inject
 	private RunedokuOverlay overlay;
 
-	private RunedokuRune selectedRune = null;
+	private RunedokuRune selectedRune = RunedokuRune.WATER_RUNE;
 	private String selectedRuneText = "<col=ff9040>Water rune</col>";
 	private RunedokuBoard board = null;
 
@@ -46,16 +46,28 @@ public class RunedokuPlugin extends Plugin
 	@Subscribe
 	public void onConfigChanged(ConfigChanged configChanged) {
 		if(configChanged.getGroup().equals(RUNEDOKU_CONFIG_GROUP)) {
-			if(configChanged.getKey().equals("useNumbers")) {
-				overlay.setShouldDrawNumbers(config.useNumbers());
-			} else if(configChanged.getKey().equals("foregroundColor")) {
-				overlay.setForegroundColor(config.foregroundColor());
-			} else if(configChanged.getKey().equals("outlineColor")) {
-				overlay.setOutlineColor(config.outlineColor());
-			} else if(configChanged.getKey().equals("errorColor")) {
-				overlay.setErrorColor(config.errorColor());
-			} else if(configChanged.getKey().equals("markOnShift")) {
-				this.markOnShift = config.markOnShift();
+			switch (configChanged.getKey()) {
+				case "useNumbers":
+					overlay.setShouldDrawNumbers(config.useNumbers());
+					break;
+				case "showSolution":
+					overlay.setShouldShowSolution(config.showSolution());
+					break;
+				case "solutionColor":
+					overlay.setSolutionColor(config.solutionColor());
+					break;
+				case "foregroundColor":
+					overlay.setForegroundColor(config.foregroundColor());
+					break;
+				case "outlineColor":
+					overlay.setOutlineColor(config.outlineColor());
+					break;
+				case "errorColor":
+					overlay.setErrorColor(config.errorColor());
+					break;
+				case "markOnShift":
+					this.markOnShift = config.markOnShift();
+					break;
 			}
 		}
 	}
@@ -68,9 +80,12 @@ public class RunedokuPlugin extends Plugin
 
 			clientThread.invokeLater(() -> {
 				Widget boardWidget = client.getWidget(RUNEDOKU_BOARD_WIDGET_ID);
-				this.board = new RunedokuBoard(boardWidget);
-				this.board.updateCells();
-				this.overlay.activate(board);
+				if (boardWidget != null) {
+					this.board = new RunedokuBoard(boardWidget, config.showSolution());
+					this.board.updateCells();
+					this.overlay.activate(board);
+					this.overlay.updateSelectedRune(this.selectedRune);
+				}
 			});
 		}
 	}
@@ -85,9 +100,11 @@ public class RunedokuPlugin extends Plugin
 
 	@Subscribe
 	public void onCanvasSizeChanged(CanvasSizeChanged canvasSizeChanged) {
-		if(board != null)
-		{
+	    if (board != null) {
 			board.updateCells();
+			if (config.showSolution()) {
+				this.board.solveBoard();
+			}
 		}
 	}
 
@@ -102,6 +119,7 @@ public class RunedokuPlugin extends Plugin
 				for(Widget cw : w.getChildren()) {
 					if(cw.getBorderType() == 2) {
 						this.selectedRune = RunedokuRune.getByItemId(cw.getItemId());
+						this.overlay.updateSelectedRune(this.selectedRune);
 						String name = cw.getName();
 						if(name.isEmpty()) {
 							name="<col=ff9040>None</col>";
@@ -164,7 +182,7 @@ public class RunedokuPlugin extends Plugin
 				MenuEntry[] menuEntries = client.getMenuEntries();
 
 				for(MenuEntry entry : menuEntries) {
-					if(entry.getOption() == menuEntryAdded.getOption()) {
+					if(entry.getOption().equals(menuEntryAdded.getOption())) {
 
 						// Our onMenuOptionClicked code consumes the click event for the menu option "Mark"
 						// so we can just change the option and target to get the desired functionality
@@ -192,9 +210,7 @@ public class RunedokuPlugin extends Plugin
 		MenuEntry[] oldEntries = client.getMenuEntries();
 		MenuEntry[] newEntries = new MenuEntry[oldEntries.length + 1];
 
-		for(int i = 0; i < oldEntries.length; i++) {
-			newEntries[i] = oldEntries[i];
-		}
+		System.arraycopy(oldEntries, 0, newEntries, 0, oldEntries.length);
 
 		if(markOnShift && client.isKeyPressed(KeyCode.KC_SHIFT)) {
 			newEntries[newEntries.length-1] = markEntry;
@@ -208,6 +224,8 @@ public class RunedokuPlugin extends Plugin
 
 	protected void loadConfig() {
 		overlay.setShouldDrawNumbers(config.useNumbers());
+		overlay.setShouldShowSolution(config.showSolution());
+		overlay.setSolutionColor(config.solutionColor());
 		overlay.setForegroundColor(config.foregroundColor());
 		overlay.setOutlineColor(config.outlineColor());
 		overlay.setErrorColor(config.errorColor());
