@@ -18,7 +18,7 @@ public class RunedokuBoard {
     private final int[][] rowNumbers;
     private final int[][] colNumbers;
     private final int[][] boxNumbers;
-    private Sudoku solution;
+    private SudokuSolver solver;
 
     /**
      Check cell to verify it does not exist in an invalid location
@@ -79,10 +79,10 @@ public class RunedokuBoard {
      */
     public void solveBoard() {
         // try to solve the board
-        if (solution.solve()) {
+        if (solver.solve()) {
 
             // grab the solved board state
-            int[][] solutionGrid = solution.getBoard();
+            int[][] solutionGrid = solver.getSolution();
 
             for(int i = 0; i < width; i++) {
                 for (int j = 0; j < width; j++) {
@@ -160,7 +160,7 @@ public class RunedokuBoard {
 
                         solutionBuilder[cells[i].getRowNumber()][cells[i].getColumnNumber()] = sudokuIndex + 1;
                     }
-                    solution = new Sudoku(solutionBuilder);
+                    solver = new SudokuSolver(solutionBuilder);
 
                     // this should never error because runescape should always generate a solvable board
                     solveBoard();
