@@ -12,6 +12,12 @@ import static com.github.adituv.runedokuplugin.RunedokuConstants.RUNEDOKU_CONFIG
 public interface RunedokuConfig extends Config
 {
 	@ConfigItem(
+			keyName = "showSolution",
+			name = "Show solution",
+			description = "Lazy"
+	)
+	default boolean showSolution() { return true; }
+	@ConfigItem(
 		keyName = "useNumbers",
 		name = "Show numbers over runes",
 		description = "Whether to overlay a number over each rune to help input into a sudoku solver"
@@ -38,6 +44,13 @@ public interface RunedokuConfig extends Config
 		description = "The color used to highlight errors in the overlay"
 	)
 	default Color errorColor() { return Color.RED; }
+
+	@ConfigItem(
+			keyName = "solutionColor",
+			name = "Solution color",
+			description = "The color used to highlight correct solution in the overlay"
+	)
+	default Color solutionColor() { return Color.GREEN; }
 
 	@ConfigItem(
 		keyName = "outlineColor",

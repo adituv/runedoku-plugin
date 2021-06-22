@@ -27,14 +27,23 @@ public enum RunedokuRune {
         return this.sudokuNumber;
     }
 
+    public static RunedokuRune getBySudokuNumber(int sudokuNumber) {
+        for(RunedokuRune rune : RunedokuRune.values()) {
+            if(rune.sudokuNumber == sudokuNumber) {
+                return rune;
+            }
+        }
+        return null;
+    }
+
     public static RunedokuRune getByItemId(int itemId) {
         for(RunedokuRune rune : RunedokuRune.values()) {
             if(rune.getItemId() == itemId) {
                 return rune;
             }
         }
-
         return null;
     }
+
 
 }
