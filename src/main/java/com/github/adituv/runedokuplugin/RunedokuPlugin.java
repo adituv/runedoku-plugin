@@ -85,7 +85,10 @@ public class RunedokuPlugin extends Plugin
 
 	@Subscribe
 	public void onCanvasSizeChanged(CanvasSizeChanged canvasSizeChanged) {
-		board.updateCells();
+		if(board != null)
+		{
+			board.updateCells();
+		}
 	}
 
 	// Must run before Inventory Tags
