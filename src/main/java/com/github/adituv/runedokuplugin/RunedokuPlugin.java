@@ -13,6 +13,7 @@ import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.api.MenuEntry;
 
 import static com.github.adituv.runedokuplugin.RunedokuConstants.*;
 
@@ -197,13 +198,12 @@ public class RunedokuPlugin extends Plugin
 	}
 
 	private MenuEntry makeMarkMenuEntry(int widgetId, int widgetIndex) {
-		MenuEntry markEntry = new MenuEntry();
-		markEntry.setParam0(widgetIndex);
-		markEntry.setParam1(widgetId);
-		markEntry.setOption("Mark");
-		markEntry.setTarget(selectedRuneText);
-		markEntry.setType(MenuAction.CC_OP.getId());
-		return markEntry;
+		return client.createMenuEntry(MenuAction.CC_OP.getId())
+			.setOption("Mark")
+			.setTarget(selectedRuneText)
+			.setType(MenuAction.CC_OP)
+			.setParam0(widgetIndex)
+			.setParam1(widgetId);
 	}
 
 	private MenuEntry[] insertMarkMenuEntry(MenuEntry markEntry) {
