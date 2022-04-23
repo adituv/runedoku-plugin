@@ -1,7 +1,6 @@
 package com.github.adituv.runedokuplugin;
 
 import com.google.inject.Inject;
-import com.jogamp.graph.geom.Outline;
 import lombok.AccessLevel;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
